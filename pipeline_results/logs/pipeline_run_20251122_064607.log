@@ -1,0 +1,12 @@
+2025-11-22 06:46:07,674 - MainPipeline - INFO - Pipeline initialized with run ID: 20251122_064607
+2025-11-22 06:46:07,674 - MainPipeline - INFO - Starting complete pipeline execution...
+2025-11-22 06:46:07,674 - MainPipeline - INFO - Stage 1: Data Loading and Validation
+2025-11-22 06:46:07,674 - MainPipeline - ERROR - Pipeline failed: Data file not found: demo_mahasiswa.csv
+2025-11-22 06:46:07,675 - MainPipeline - ERROR - Traceback (most recent call last):
+  File "/workspaces/Skripsi/scripts/main_pipeline.py", line 740, in run_complete_pipeline
+    raw_data = self._load_and_validate_data()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/Skripsi/scripts/main_pipeline.py", line 804, in _load_and_validate_data
+    raise FileNotFoundError(f"Data file not found: {self.config.raw_data_path}")
+FileNotFoundError: Data file not found: demo_mahasiswa.csv
+

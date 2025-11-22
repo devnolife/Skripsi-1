@@ -1,0 +1,10 @@
+{
+  "model_name": "Standard_KNN",
+  "run_id": "20251122_064653",
+  "timestamp": "2025-11-22T06:46:53.319489",
+  "metrics": {
+    "accuracy": 0.6521739130434783,
+    "f1_score": 0.7777777777777778
+  },
+  "metadata": {}
+}

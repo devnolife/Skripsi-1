@@ -1,0 +1,25 @@
+2025-11-22 06:46:53,093 - MainPipeline - INFO - Pipeline initialized with run ID: 20251122_064653
+2025-11-22 06:46:53,094 - MainPipeline - INFO - Starting complete pipeline execution...
+2025-11-22 06:46:53,094 - MainPipeline - INFO - Stage 1: Data Loading and Validation
+2025-11-22 06:46:53,098 - MainPipeline - INFO - Loaded 112 records with 50 features
+2025-11-22 06:46:53,111 - MainPipeline - INFO - Data validation passed
+2025-11-22 06:46:53,111 - MainPipeline - INFO - Stage 2: Data Cleaning and Preprocessing
+2025-11-22 06:46:53,112 - MainPipeline - ERROR - Data cleaning failed: No module named 'data_processor'
+2025-11-22 06:46:53,112 - MainPipeline - INFO - Stage 3: Feature Engineering
+2025-11-22 06:46:53,112 - MainPipeline - INFO - Generating organizational involvement data...
+2025-11-22 06:46:53,112 - MainPipeline - WARNING - Organizational data generation failed: No module named 'organizational_data_generator'
+2025-11-22 06:46:53,112 - MainPipeline - INFO - Continuing with academic features only
+2025-11-22 06:46:53,114 - MainPipeline - INFO - Feature engineering completed: 50 total features
+2025-11-22 06:46:53,114 - MainPipeline - INFO - Stage 4: Model Training and Optimization
+2025-11-22 06:46:53,116 - MainPipeline - ERROR - Enhanced Fuzzy K-NN training failed: No module named 'fuzzy_knn_enhanced'
+2025-11-22 06:46:53,268 - MainPipeline - INFO - Random_Forest trained: F1=1.000
+2025-11-22 06:46:53,320 - MainPipeline - INFO - Standard_KNN trained: F1=0.778
+2025-11-22 06:46:53,320 - MainPipeline - INFO - Model training completed: 2 models trained
+2025-11-22 06:46:53,320 - MainPipeline - INFO - Stage 5: Comprehensive Evaluation
+2025-11-22 06:46:53,320 - MainPipeline - ERROR - Comprehensive evaluation failed: No module named 'evaluation_framework'
+2025-11-22 06:46:53,321 - MainPipeline - INFO - Stage 6: Results Export and Documentation
+2025-11-22 06:46:53,324 - MainPipeline - INFO - Clean dataset exported to: pipeline_results/clean_dataset_20251122_064653.csv
+2025-11-22 06:46:54,290 - MainPipeline - INFO - Stage 7: Thesis Package Generation
+2025-11-22 06:46:54,294 - MainPipeline - INFO - Thesis package generated at: pipeline_results/thesis_package
+2025-11-22 06:46:54,296 - MainPipeline - INFO - Final results saved to: pipeline_results/final_results_20251122_064653.json
+2025-11-22 06:46:54,296 - MainPipeline - INFO - Pipeline execution completed successfully!

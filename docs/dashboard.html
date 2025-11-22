@@ -410,7 +410,11 @@
                     </div>
                 </div>
                 <div id="prestasi-table-container">
-                    <p>Data akan ditampilkan setelah file diupload</p>
+                    <div style="padding: 40px; text-align: center; color: #7f8c8d;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 32px; margin-bottom: 15px;"></i>
+                        <p style="font-size: 16px;">Memuat data prestasi...</p>
+                        <p style="font-size: 12px; margin-top: 5px;">Jika data tidak muncul, periksa console browser (F12)</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -488,6 +492,7 @@
         let prestasiData = [];
         let mahasiswaData = [];
         let cleanedData = [];
+        let integratedData = []; // Data mahasiswa dengan agregasi prestasi
 
         function showTab(tabName) {
             // Hide all tabs
@@ -609,34 +614,119 @@
             document.getElementById('mahasiswa-lulus').textContent = lulusCount;
         }
 
-        function displayPrestasiTable() {
-            const container = document.getElementById('prestasi-table-container');
-            const sampleData = prestasiData; // Show all rows
-            
-            // Create a map of NIM to Nama for quick lookup
-            const nimToNama = {};
-            mahasiswaData.forEach(mhs => {
-                if (mhs.nim) {
-                    nimToNama[mhs.nim.toString().trim()] = mhs.nama || 'N/A';
+        // UUID to NIM mapping (loaded from JSON)
+        let uuidToNimMapping = {};
+
+        async function loadUUIDMapping() {
+            try {
+                console.log('🔍 Fetching UUID mapping from: ./uuid_to_nim_mapping.json');
+                const response = await fetch('./uuid_to_nim_mapping.json');
+                console.log('📡 UUID mapping response status:', response.status);
+                
+                if (response.ok) {
+                    uuidToNimMapping = await response.json();
+                    console.log('✅ UUID mapping loaded:', Object.keys(uuidToNimMapping).length, 'mappings');
+                    console.log('🔍 Sample mapping:', Object.entries(uuidToNimMapping).slice(0, 3));
+                } else {
+                    console.log('⚠️ UUID mapping file not found (status ' + response.status + '), will show without names');
                 }
-            });
+            } catch (error) {
+                console.error('❌ Error loading UUID mapping:', error);
+            }
+        }
+
+        function displayPrestasiTable() {
+            try {
+                const container = document.getElementById('prestasi-table-container');
+                if (!container) {
+                    console.error('❌ prestasi-table-container not found!');
+                    return;
+                }
+                
+                const sampleData = prestasiData; // Show all rows
+                
+                console.log('📊 displayPrestasiTable called');
+                console.log('📦 UUID mappings available:', Object.keys(uuidToNimMapping).length);
+                console.log('👥 Mahasiswa data available:', mahasiswaData.length);
+                console.log('🎯 Prestasi data to display:', sampleData.length);
+                
+                // Create NIM to Nama mapping
+                const nimToNama = {};
+                mahasiswaData.forEach(mhs => {
+                    if (mhs.nim) {
+                        nimToNama[mhs.nim.toString().trim()] = mhs.nama || 'N/A';
+                    }
+                });
+                
+                console.log('🔗 NIM to Nama mappings created:', Object.keys(nimToNama).length);
+            
+            // Calculate statistics
+            const stats = {
+                total: sampleData.length,
+                akademik: sampleData.filter(p => p.kategori && p.kategori.toLowerCase() === 'akademik').length,
+                nonAkademik: sampleData.filter(p => p.kategori && p.kategori.toLowerCase() === 'non_akademik').length,
+                internasional: sampleData.filter(p => p.tingkat && p.tingkat.toLowerCase() === 'internasional').length,
+                nasional: sampleData.filter(p => p.tingkat && p.tingkat.toLowerCase() === 'nasional').length,
+                regional: sampleData.filter(p => p.tingkat && p.tingkat.toLowerCase() === 'regional').length,
+                lokal: sampleData.filter(p => p.tingkat && p.tingkat.toLowerCase() === 'lokal').length,
+                individu: sampleData.filter(p => p.jenis_prestasi && p.jenis_prestasi.toLowerCase() === 'individu').length,
+                tim: sampleData.filter(p => p.jenis_prestasi && p.jenis_prestasi.toLowerCase() === 'tim').length
+            };
+            
+            // Count how many can be mapped
+            const mappableCount = sampleData.filter(p => uuidToNimMapping[p.id_mahasiswa]).length;
             
             let html = `
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; margin-bottom: 20px; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 15px 0; font-size: 20px;">🏆 Detail Prestasi Mahasiswa</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 12px; opacity: 0.9;">Total Prestasi</div>
+                            <div style="font-size: 28px; font-weight: bold;">${stats.total}</div>
+                            <div style="font-size: 11px; opacity: 0.8; margin-top: 4px;">${mappableCount} dengan nama (${(mappableCount/stats.total*100).toFixed(0)}%)</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 12px; opacity: 0.9;">Akademik / Non-Akademik</div>
+                            <div style="font-size: 20px; font-weight: bold;">${stats.akademik} / ${stats.nonAkademik}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 12px; opacity: 0.9;">Individu / Tim</div>
+                            <div style="font-size: 20px; font-weight: bold;">${stats.individu} / ${stats.tim}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 12px; opacity: 0.9;">Per Tingkat</div>
+                            <div style="font-size: 14px; font-weight: bold;">
+                                🌍 ${stats.internasional} | 🇮🇩 ${stats.nasional}<br>
+                                📍 ${stats.regional} | 🏠 ${stats.lokal}
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Nama Mahasiswa</th>
-                            <th>Judul</th>
-                            <th>Jenis Prestasi</th>
-                            <th>Tingkat</th>
-                            <th>Kategori</th>
-                            <th>Tanggal</th>
+                            <th style="width: 40px;">No</th>
+                            <th style="width: 110px;">NIM</th>
+                            <th style="width: 160px;">Nama Mahasiswa</th>
+                            <th>Judul Lomba / Prestasi</th>
+                            <th style="width: 100px;">Tingkat</th>
+                            <th style="width: 110px;">Kategori</th>
+                            <th style="width: 90px;">Tanggal</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
             
-            sampleData.forEach(item => {
+            sampleData.forEach((item, index) => {
+                // Data already has NIM and Nama from JSON
+                const nim = item.nim || '';
+                const nama = item.nama || '-';
+                
+                // Debug logging for first few items
+                if (index < 3) {
+                    console.log(`Row ${index + 1}: NIM=${nim}, Nama=${nama}, Lomba=${item.judul}`);
+                }
+                
                 // Format tanggal to DD/MM/YYYY
                 let tanggalFormatted = 'N/A';
                 if (item.tanggal) {
@@ -649,17 +739,32 @@
                     }
                 }
                 
-                // Get nama mahasiswa from id_mahasiswa
-                const namaMahasiswa = nimToNama[item.id_mahasiswa?.toString().trim()] || 'N/A';
+                // Badge untuk tingkat
+                let tingkatBadge = '';
+                if (item.tingkat) {
+                    const tingkat = item.tingkat.toLowerCase();
+                    const colors = {
+                        'internasional': 'background: #28a745; color: white;',
+                        'nasional': 'background: #007bff; color: white;',
+                        'regional': 'background: #ffc107; color: black;',
+                        'lokal': 'background: #6c757d; color: white;'
+                    };
+                    const style = colors[tingkat] || 'background: #e9ecef;';
+                    tingkatBadge = `<span style="padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; ${style}">${item.tingkat}</span>`;
+                }
+                
+                // Highlight row if has name
+                const rowStyle = nim ? 'background: rgba(40, 167, 69, 0.05);' : '';
                 
                 html += `
-                    <tr>
-                        <td>${namaMahasiswa}</td>
+                    <tr style="${rowStyle}">
+                        <td>${index + 1}</td>
+                        <td style="font-size: 11px;">${nim || '-'}</td>
+                        <td><strong>${nama}</strong></td>
                         <td>${item.judul || 'N/A'}</td>
-                        <td>${item.jenis_prestasi || 'N/A'}</td>
-                        <td>${item.tingkat || 'N/A'}</td>
+                        <td>${tingkatBadge}</td>
                         <td>${item.kategori || 'N/A'}</td>
-                        <td>${tanggalFormatted}</td>
+                        <td style="font-size: 11px;">${tanggalFormatted}</td>
                     </tr>
                 `;
             });
@@ -673,6 +778,15 @@
             `;
             
             container.innerHTML = html;
+            console.log('✅ Table HTML rendered successfully');
+            
+            } catch (error) {
+                console.error('❌ Error in displayPrestasiTable:', error);
+                const container = document.getElementById('prestasi-table-container');
+                if (container) {
+                    container.innerHTML = '<p style="color: red; padding: 20px;">Error menampilkan data: ' + error.message + '</p>';
+                }
+            }
         }
 
         function filterPrestasiTable() {
@@ -680,7 +794,7 @@
             const searchTerm = searchInput.value.toLowerCase();
             const container = document.getElementById('prestasi-table-container');
             
-            // Create a map of NIM to Nama for quick lookup
+            // Create NIM to Nama mapping
             const nimToNama = {};
             mahasiswaData.forEach(mhs => {
                 if (mhs.nim) {
@@ -688,38 +802,83 @@
                 }
             });
             
-            // Filter data based on search term
+            // Filter data based on search term (including NIM and Nama)
             const filteredData = prestasiData.filter(item => {
                 const judul = (item.judul || '').toLowerCase();
                 const jenisPrestasi = (item.jenis_prestasi || '').toLowerCase();
                 const tingkat = (item.tingkat || '').toLowerCase();
                 const kategori = (item.kategori || '').toLowerCase();
-                const namaMahasiswa = (nimToNama[item.id_mahasiswa?.toString().trim()] || '').toLowerCase();
+                const nim = (item.nim || '').toLowerCase();
+                const nama = (item.nama || '').toLowerCase();
                 
                 return judul.includes(searchTerm) ||
                        jenisPrestasi.includes(searchTerm) ||
                        tingkat.includes(searchTerm) ||
                        kategori.includes(searchTerm) ||
-                       namaMahasiswa.includes(searchTerm);
+                       nim.includes(searchTerm) ||
+                       nama.includes(searchTerm);
             });
+            
+            // Calculate statistics for filtered data
+            const stats = {
+                total: filteredData.length,
+                akademik: filteredData.filter(p => p.kategori && p.kategori.toLowerCase() === 'akademik').length,
+                nonAkademik: filteredData.filter(p => p.kategori && p.kategori.toLowerCase() === 'non_akademik').length,
+                internasional: filteredData.filter(p => p.tingkat && p.tingkat.toLowerCase() === 'internasional').length,
+                nasional: filteredData.filter(p => p.tingkat && p.tingkat.toLowerCase() === 'nasional').length,
+                regional: filteredData.filter(p => p.tingkat && p.tingkat.toLowerCase() === 'regional').length,
+                lokal: filteredData.filter(p => p.tingkat && p.tingkat.toLowerCase() === 'lokal').length,
+                individu: filteredData.filter(p => p.jenis_prestasi && p.jenis_prestasi.toLowerCase() === 'individu').length,
+                tim: filteredData.filter(p => p.jenis_prestasi && p.jenis_prestasi.toLowerCase() === 'tim').length
+            };
             
             // Rebuild table with filtered data
             let html = `
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; margin-bottom: 20px; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 15px 0; font-size: 20px;">📊 Statistik Prestasi${searchTerm ? ' (Filtered)' : ''}</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 12px; opacity: 0.9;">Total Prestasi</div>
+                            <div style="font-size: 28px; font-weight: bold;">${stats.total}</div>
+                            ${searchTerm ? `<div style="font-size: 11px; opacity: 0.8;">dari ${prestasiData.length} total</div>` : ''}
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 12px; opacity: 0.9;">Akademik / Non-Akademik</div>
+                            <div style="font-size: 20px; font-weight: bold;">${stats.akademik} / ${stats.nonAkademik}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 12px; opacity: 0.9;">Individu / Tim</div>
+                            <div style="font-size: 20px; font-weight: bold;">${stats.individu} / ${stats.tim}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 12px; opacity: 0.9;">Per Tingkat</div>
+                            <div style="font-size: 14px; font-weight: bold;">
+                                🌍 ${stats.internasional} | 🇮🇩 ${stats.nasional}<br>
+                                📍 ${stats.regional} | 🏠 ${stats.lokal}
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Nama Mahasiswa</th>
-                            <th>Judul</th>
-                            <th>Jenis Prestasi</th>
-                            <th>Tingkat</th>
-                            <th>Kategori</th>
-                            <th>Tanggal</th>
+                            <th style="width: 40px;">No</th>
+                            <th style="width: 110px;">NIM</th>
+                            <th style="width: 160px;">Nama Mahasiswa</th>
+                            <th>Judul Lomba / Prestasi</th>
+                            <th style="width: 100px;">Tingkat</th>
+                            <th style="width: 110px;">Kategori</th>
+                            <th style="width: 90px;">Tanggal</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
             
-            filteredData.forEach(item => {
+            filteredData.forEach((item, index) => {
+                // Data already has NIM and Nama from JSON
+                const nim = item.nim || '';
+                const nama = item.nama || '-';
+                
                 // Format tanggal to DD/MM/YYYY
                 let tanggalFormatted = 'N/A';
                 if (item.tanggal) {
@@ -732,17 +891,32 @@
                     }
                 }
                 
-                // Get nama mahasiswa from id_mahasiswa
-                const namaMahasiswa = nimToNama[item.id_mahasiswa?.toString().trim()] || 'N/A';
+                // Badge untuk tingkat
+                let tingkatBadge = '';
+                if (item.tingkat) {
+                    const tingkat = item.tingkat.toLowerCase();
+                    const colors = {
+                        'internasional': 'background: #28a745; color: white;',
+                        'nasional': 'background: #007bff; color: white;',
+                        'regional': 'background: #ffc107; color: black;',
+                        'lokal': 'background: #6c757d; color: white;'
+                    };
+                    const style = colors[tingkat] || 'background: #e9ecef;';
+                    tingkatBadge = `<span style="padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; ${style}">${item.tingkat}</span>`;
+                }
+                
+                // Highlight row if has name
+                const rowStyle = nim ? 'background: rgba(40, 167, 69, 0.05);' : '';
                 
                 html += `
-                    <tr>
-                        <td>${namaMahasiswa}</td>
+                    <tr style="${rowStyle}">
+                        <td>${index + 1}</td>
+                        <td style="font-size: 11px;">${nim || '-'}</td>
+                        <td><strong>${nama}</strong></td>
                         <td>${item.judul || 'N/A'}</td>
-                        <td>${item.jenis_prestasi || 'N/A'}</td>
-                        <td>${item.tingkat || 'N/A'}</td>
+                        <td>${tingkatBadge}</td>
                         <td>${item.kategori || 'N/A'}</td>
-                        <td>${tanggalFormatted}</td>
+                        <td style="font-size: 11px;">${tanggalFormatted}</td>
                     </tr>
                 `;
             });
@@ -821,6 +995,12 @@
             const searchTerm = searchInput.value.toLowerCase();
             const container = document.getElementById('mahasiswa-table-container');
             
+            // If integrated data is available, use it; otherwise use mahasiswaData
+            if (integratedData.length > 0) {
+                filterMahasiswaWithPrestasi(searchTerm);
+                return;
+            }
+            
             // Filter data based on search term
             const filteredData = mahasiswaData.filter(item => {
                 const nim = (item.nim || '').toLowerCase();
@@ -885,6 +1065,197 @@
                     Menampilkan ${filteredData.length} dari ${mahasiswaData.length} total data mahasiswa
                 </p>
             `;
+            
+            container.innerHTML = html;
+        }
+
+        function displayMahasiswaWithPrestasi() {
+            if (integratedData.length === 0) {
+                console.log('⚠️ No integrated data available');
+                return;
+            }
+            
+            const container = document.getElementById('mahasiswa-table-container');
+            
+            // Create mapping from NIM to Nama from mahasiswaData
+            const nimToNama = {};
+            mahasiswaData.forEach(mhs => {
+                if (mhs.nim) {
+                    nimToNama[mhs.nim.toString().trim()] = mhs.nama || 'N/A';
+                }
+            });
+            
+            // Sort by total_prestasi descending
+            const sortedData = integratedData.sort((a, b) => {
+                const prestasiA = parseInt(a.total_prestasi) || 0;
+                const prestasiB = parseInt(b.total_prestasi) || 0;
+                return prestasiB - prestasiA;
+            });
+            
+            let html = `
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; margin-bottom: 20px; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 10px 0; font-size: 20px;">🎓 Mahasiswa & Prestasi</h3>
+                    <p style="margin: 0; opacity: 0.9; font-size: 14px;">Data terintegrasi: ${integratedData.length} mahasiswa dengan informasi prestasi lengkap</p>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">No</th>
+                            <th style="width: 130px;">NIM</th>
+                            <th>Nama</th>
+                            <th style="width: 80px;">IPK</th>
+                            <th style="width: 100px;">Total Prestasi</th>
+                            <th style="width: 100px;">Akademik</th>
+                            <th style="width: 100px;">Non-Akademik</th>
+                            <th style="width: 150px;">Per Tingkat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            sortedData.forEach((item, index) => {
+                const nama = nimToNama[item.nim] || 'N/A';
+                const ipk = item.final_ipk ? parseFloat(item.final_ipk).toFixed(2) : 'N/A';
+                const totalPrestasi = parseInt(item.total_prestasi) || 0;
+                const akademik = parseInt(item.prestasi_akademik) || 0;
+                const nonAkademik = parseInt(item.prestasi_non_akademik) || 0;
+                const international = parseInt(item.international_achievements) || 0;
+                const national = parseInt(item.national_achievements) || 0;
+                const regional = parseInt(item.regional_achievements) || 0;
+                
+                // Row color based on total prestasi
+                let rowStyle = '';
+                if (totalPrestasi >= 10) {
+                    rowStyle = 'background: rgba(40, 167, 69, 0.1);'; // Green tint for high achievers
+                } else if (totalPrestasi >= 5) {
+                    rowStyle = 'background: rgba(0, 123, 255, 0.1);'; // Blue tint for medium achievers
+                }
+                
+                html += `
+                    <tr style="${rowStyle}">
+                        <td>${index + 1}</td>
+                        <td>${item.nim || 'N/A'}</td>
+                        <td><strong>${nama}</strong></td>
+                        <td>${ipk}</td>
+                        <td style="text-align: center;"><strong>${totalPrestasi}</strong></td>
+                        <td style="text-align: center;">${akademik}</td>
+                        <td style="text-align: center;">${nonAkademik}</td>
+                        <td style="font-size: 11px;">
+                            🌍 ${international} | 🇮🇩 ${national} | 📍 ${regional}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                <p style="margin-top: 10px; color: #7f8c8d;">
+                    ✅ Menampilkan ${integratedData.length} mahasiswa dengan data prestasi terintegrasi
+                </p>
+            `;
+            
+            container.innerHTML = html;
+            
+            // Update status
+            document.getElementById('mahasiswa-status').className = 'alert alert-success';
+            document.getElementById('mahasiswa-status').innerHTML = '<i class="fas fa-check"></i> ✅ Data mahasiswa + prestasi berhasil terintegrasi: ' + integratedData.length + ' records';
+            document.getElementById('mahasiswa-status').classList.remove('hidden');
+        }
+
+        function filterMahasiswaWithPrestasi(searchTerm) {
+            const container = document.getElementById('mahasiswa-table-container');
+            
+            // Create mapping from NIM to Nama
+            const nimToNama = {};
+            mahasiswaData.forEach(mhs => {
+                if (mhs.nim) {
+                    nimToNama[mhs.nim.toString().trim()] = mhs.nama || 'N/A';
+                }
+            });
+            
+            // Filter integrated data
+            const filteredData = integratedData.filter(item => {
+                const nim = (item.nim || '').toLowerCase();
+                const nama = (nimToNama[item.nim] || '').toLowerCase();
+                const totalPrestasi = (item.total_prestasi || '').toString();
+                
+                return nim.includes(searchTerm) ||
+                       nama.includes(searchTerm) ||
+                       totalPrestasi.includes(searchTerm);
+            });
+            
+            // Sort by total_prestasi descending
+            const sortedData = filteredData.sort((a, b) => {
+                const prestasiA = parseInt(a.total_prestasi) || 0;
+                const prestasiB = parseInt(b.total_prestasi) || 0;
+                return prestasiB - prestasiA;
+            });
+            
+            let html = `
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; margin-bottom: 20px; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 10px 0; font-size: 20px;">🎓 Mahasiswa & Prestasi${searchTerm ? ' (Filtered)' : ''}</h3>
+                    <p style="margin: 0; opacity: 0.9; font-size: 14px;">
+                        ${searchTerm ? `Menampilkan ${filteredData.length} dari ${integratedData.length} mahasiswa` : `Data terintegrasi: ${integratedData.length} mahasiswa`}
+                    </p>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">No</th>
+                            <th style="width: 130px;">NIM</th>
+                            <th>Nama</th>
+                            <th style="width: 80px;">IPK</th>
+                            <th style="width: 100px;">Total Prestasi</th>
+                            <th style="width: 100px;">Akademik</th>
+                            <th style="width: 100px;">Non-Akademik</th>
+                            <th style="width: 150px;">Per Tingkat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            sortedData.forEach((item, index) => {
+                const nama = nimToNama[item.nim] || 'N/A';
+                const ipk = item.final_ipk ? parseFloat(item.final_ipk).toFixed(2) : 'N/A';
+                const totalPrestasi = parseInt(item.total_prestasi) || 0;
+                const akademik = parseInt(item.prestasi_akademik) || 0;
+                const nonAkademik = parseInt(item.prestasi_non_akademik) || 0;
+                const international = parseInt(item.international_achievements) || 0;
+                const national = parseInt(item.national_achievements) || 0;
+                const regional = parseInt(item.regional_achievements) || 0;
+                
+                // Row color based on total prestasi
+                let rowStyle = '';
+                if (totalPrestasi >= 10) {
+                    rowStyle = 'background: rgba(40, 167, 69, 0.1);';
+                } else if (totalPrestasi >= 5) {
+                    rowStyle = 'background: rgba(0, 123, 255, 0.1);';
+                }
+                
+                html += `
+                    <tr style="${rowStyle}">
+                        <td>${index + 1}</td>
+                        <td>${item.nim || 'N/A'}</td>
+                        <td><strong>${nama}</strong></td>
+                        <td>${ipk}</td>
+                        <td style="text-align: center;"><strong>${totalPrestasi}</strong></td>
+                        <td style="text-align: center;">${akademik}</td>
+                        <td style="text-align: center;">${nonAkademik}</td>
+                        <td style="font-size: 11px;">
+                            🌍 ${international} | 🇮🇩 ${national} | 📍 ${regional}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                <p style="margin-top: 10px; color: #7f8c8d;">
+                    Menampilkan ${filteredData.length} dari ${integratedData.length} total mahasiswa
+                </p>  
+            `;  
             
             container.innerHTML = html;
         }
@@ -1045,21 +1416,31 @@
         }
 
         function updateCharts() {
-            if (prestasiData.length > 0) {
-                createPrestasiChart();
-            }
-            
-            if (mahasiswaData.length > 0) {
-                createIPKChart();
-            }
-            
-            if (prestasiData.length > 0 && mahasiswaData.length > 0) {
-                createCorrelationChart();
+            try {
+                if (prestasiData.length > 0) {
+                    createPrestasiChart();
+                }
+                
+                if (mahasiswaData.length > 0) {
+                    createIPKChart();
+                }
+                
+                if (prestasiData.length > 0 && mahasiswaData.length > 0) {
+                    createCorrelationChart();
+                }
+            } catch (error) {
+                console.warn('⚠️ Chart update skipped:', error.message);
+                // Charts are optional, continue without them
             }
         }
 
         function createPrestasiChart() {
-            const ctx = document.getElementById('prestasi-chart').getContext('2d');
+            const canvas = document.getElementById('prestasi-chart');
+            if (!canvas) {
+                console.warn('⚠️ prestasi-chart canvas not found');
+                return;
+            }
+            const ctx = canvas.getContext('2d');
             
             // Count prestasi by tingkat
             const tingkatCounts = {};
@@ -1096,7 +1477,12 @@
         }
 
         function createIPKChart() {
-            const ctx = document.getElementById('ipk-chart').getContext('2d');
+            const canvas = document.getElementById('ipk-chart');
+            if (!canvas) {
+                console.warn('⚠️ ipk-chart canvas not found');
+                return;
+            }
+            const ctx = canvas.getContext('2d');
             
             // Create IPK ranges
             const ipkRanges = {
@@ -1149,7 +1535,12 @@
         }
 
         function createCorrelationChart() {
-            const ctx = document.getElementById('correlation-chart').getContext('2d');
+            const canvas = document.getElementById('correlation-chart');
+            if (!canvas) {
+                console.warn('⚠️ correlation-chart canvas not found');
+                return;
+            }
+            const ctx = canvas.getContext('2d');
             
             // Create correlation data
             const correlationData = [];
@@ -1214,41 +1605,147 @@
             });
         }
 
-        // Auto-load prestasi data on page load
-        async function autoLoadPrestasiData() {
+        // Auto-load mahasiswa data on page load
+        async function autoLoadMahasiswaData() {
+            console.log('🔄 Starting to load mahasiswa data...');
             try {
-                // Try relative path from docs folder
-                const response = await fetch('./prestasi_clean_20250913_143222.csv');
+                const response = await fetch('./mahasiswa_clean_20250913_143222.csv');
+                console.log('📡 Response status:', response.status);
                 if (!response.ok) {
-                    throw new Error('File not found');
+                    throw new Error('File not found - status: ' + response.status);
                 }
                 const csvText = await response.text();
+                console.log('📄 CSV text length:', csvText.length);
                 
                 Papa.parse(csvText, {
                     header: true,
+                    skipEmptyLines: true,
                     complete: function(results) {
-                        prestasiData = results.data;
-                        displayPrestasiStats();
-                        displayPrestasiTable();
-                        // Show success message
-                        document.getElementById('prestasi-status').classList.remove('hidden');
-                        console.log('Prestasi data loaded:', prestasiData.length, 'records');
+                        mahasiswaData = results.data.filter(row => row.nim && row.nim.trim() !== '');
+                        console.log('✅ Mahasiswa data parsed:', mahasiswaData.length, 'records');
+                        
+                        if (mahasiswaData.length > 0) {
+                            displayMahasiswaStats();
+                            displayMahasiswaTable();
+                            document.getElementById('mahasiswa-status').className = 'alert alert-success';
+                            document.getElementById('mahasiswa-status').innerHTML = '<i class="fas fa-check"></i> Data mahasiswa berhasil dimuat: ' + mahasiswaData.length + ' records';
+                            document.getElementById('mahasiswa-status').classList.remove('hidden');
+                            
+                            // After mahasiswa data loaded, load integrated data then prestasi
+                            autoLoadIntegratedData();
+                        } else {
+                            console.error('❌ No valid mahasiswa data found');
+                        }
                     },
                     error: function(error) {
-                        console.error('Error parsing prestasi data:', error);
+                        console.error('❌ Error parsing mahasiswa data:', error);
+                        document.getElementById('mahasiswa-status').className = 'alert alert-danger';
+                        document.getElementById('mahasiswa-status').innerHTML = '<i class="fas fa-times"></i> Error parsing: ' + error.message;
+                        document.getElementById('mahasiswa-status').classList.remove('hidden');
                     }
                 });
             } catch (error) {
-                console.error('Error fetching prestasi data:', error);
-                // If file not found, show default message
+                console.error('❌ Error fetching mahasiswa data:', error);
+                document.getElementById('mahasiswa-status').className = 'alert alert-danger';
+                document.getElementById('mahasiswa-status').innerHTML = '<i class="fas fa-times"></i> Error loading file: ' + error.message;
+                document.getElementById('mahasiswa-status').classList.remove('hidden');
+                document.getElementById('mahasiswa-table-container').innerHTML = 
+                    '<p style="color: red;">Error: ' + error.message + '<br>Silakan upload file manual atau refresh page.</p>';
+            }
+        }
+
+        // Auto-load integrated dataset (mahasiswa + prestasi aggregated)
+        async function autoLoadIntegratedData() {
+            console.log('🔄 Starting to load integrated data...');
+            try {
+                const response = await fetch('./integrated_enhanced_dataset_20250913_150718.csv');
+                console.log('📡 Integrated response status:', response.status);
+                if (!response.ok) {
+                    throw new Error('File not found - status: ' + response.status);
+                }
+                const csvText = await response.text();
+                console.log('📄 Integrated CSV text length:', csvText.length);
+                
+                Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        integratedData = results.data.filter(row => row.nim && row.nim.trim() !== '');
+                        console.log('✅ Integrated data parsed:', integratedData.length, 'records');
+                        
+                        if (integratedData.length > 0) {
+                            // Update mahasiswa display with integrated data
+                            displayMahasiswaWithPrestasi();
+                            console.log('✅ Mahasiswa table updated with prestasi data');
+                        }
+                        
+                        // Continue to load prestasi data
+                        autoLoadPrestasiData();
+                    },
+                    error: function(error) {
+                        console.error('❌ Error parsing integrated data:', error);
+                        // Continue anyway
+                        autoLoadPrestasiData();
+                    }
+                });
+            } catch (error) {
+                console.error('❌ Error fetching integrated data:', error);
+                // Continue anyway
+                autoLoadPrestasiData();
+            }
+        }
+
+        // Auto-load prestasi data on page load
+        async function autoLoadPrestasiData() {
+            console.log('🔄 Starting to load prestasi data...');
+            try {
+                // Load JSON file with NIM and names
+                const response = await fetch('./prestasi_data.json');
+                console.log('📡 Prestasi response status:', response.status);
+                if (!response.ok) {
+                    throw new Error('File not found - status: ' + response.status);
+                }
+                prestasiData = await response.json();
+                console.log('✅ Prestasi data loaded:', prestasiData.length, 'records');
+                console.log('👥 Records with NIM:', prestasiData.filter(r => r.nim && r.nim.trim()).length);
+                
+                if (prestasiData.length > 0) {
+                    console.log('🎯 Calling displayPrestasiStats()...');
+                    displayPrestasiStats();
+                    console.log('🎯 Calling displayPrestasiTable()...');
+                    displayPrestasiTable();
+                    console.log('✅ Display functions completed');
+                    
+                    document.getElementById('prestasi-status').className = 'alert alert-success';
+                    document.getElementById('prestasi-status').innerHTML = '<i class="fas fa-check"></i> Data prestasi berhasil dimuat: ' + prestasiData.length + ' records';
+                    document.getElementById('prestasi-status').classList.remove('hidden');
+                    
+                    // Update charts after all data loaded
+                    updateCharts();
+                } else {
+                    console.error('❌ No valid prestasi data found');
+                    document.getElementById('prestasi-table-container').innerHTML = 
+                        '<p style="color: red; padding: 20px;">Tidak ada data prestasi yang valid ditemukan.</p>';
+                }
+            } catch (error) {
+                console.error('❌ Error fetching prestasi data:', error);
+                document.getElementById('prestasi-status').className = 'alert alert-danger';
+                document.getElementById('prestasi-status').innerHTML = '<i class="fas fa-times"></i> Error loading file: ' + error.message;
+                document.getElementById('prestasi-status').classList.remove('hidden');
                 document.getElementById('prestasi-table-container').innerHTML = 
-                    '<p>Data akan ditampilkan setelah file diupload</p>';
+                    '<p style="color: red;">Error: ' + error.message + '<br>Silakan upload file manual atau refresh page.</p>';
             }
         }
 
         // Initialize default hidden elements and auto-load data
-        document.addEventListener('DOMContentLoaded', function() {
-            autoLoadPrestasiData();
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Load UUID mapping first
+            console.log('🔄 Loading UUID to NIM mapping...');
+            await loadUUIDMapping();
+            console.log('✅ UUID mapping loaded, proceeding with data loading...');
+            
+            // Load mahasiswa data first, then prestasi data will be loaded automatically
+            autoLoadMahasiswaData();
         });
     </script>
 </body>

@@ -25,7 +25,7 @@ sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from data_processing.enhanced_data_processor import EnhancedDataProcessor
 from models.fuzzy_knn_enhanced import EnhancedFuzzyKNN
-from evaluation.evaluation_framework import EvaluationFramework
+from evaluation.evaluation_framework import ComprehensiveEvaluationFramework as EvaluationFramework
 from utils.config import get_project_root, load_config, get_data_path, get_results_path, ensure_dir
 from dataclasses import dataclass, asdict
 import warnings
